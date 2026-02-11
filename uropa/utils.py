@@ -385,7 +385,7 @@ def check_bed_format(bedfile, logger):
 
 	with open(bedfile) as f:
 		for i, line in enumerate(f):
-			if not re.match("(\S)+\s+([0-9]+)\s+([0-9]+)(\s+\S+)?(\s+[0-9,.]+)?(\s+[.\-+])?", line):
+			if not re.match(r"(\S)+\s+([0-9]+)\s+([0-9]+)(\s+\S+)?(\s+[0-9,.]+)?(\s+[.\-+])?", line):
 				logger.error("Line {0} in {1} is not proper bed format: {2}".format(i+1, bedfile, line))
 				sys.exit()
 

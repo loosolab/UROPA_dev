@@ -86,7 +86,7 @@ def compute_signed_distance(df):
     return pd.Series(signed_distance, index=df.index, dtype=float)
 
 
-def plot_distance_distribution(prefix, mode="relative", split_by=None, source="finalhits"):
+def plot_distance_distribution(prefix, mode="stranded", split_by=None, source="finalhits"):
     """Generate a KDE plot of peak-to-feature distances.
 
     Args:
@@ -134,6 +134,7 @@ def plot_distance_distribution(prefix, mode="relative", split_by=None, source="f
         ax.axvline(x=0, color="grey", linestyle="--", linewidth=0.8)
     else:
         ax.set_xlabel("Distance (bp)")
+        ax.set_xlim(left=0)
 
     ax.set_ylabel("Density")
     ax.set_title("Distance to Feature")

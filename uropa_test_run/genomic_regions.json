@@ -1,0 +1,15 @@
+{
+"queries":[
+    {"distance": [1000, 100], "feature": ["gene"], "feature_anchor": ["start"], "name": "promoters", "relative_location": ["PeakInsideFeature", "FeatureInsidePeak", "Upstream", "Downstream", "OverlapStart", "OverlapEnd"], "strand": "ignore"},
+    {"distance": [1, 1], "feature": ["exon"], "feature_anchor": ["start", "center", "end"], "internals": 1.0, "name": "forward_exons", "relative_location": ["PeakInsideFeature", "FeatureInsidePeak", "Upstream", "Downstream", "OverlapStart", "OverlapEnd"], "strand": "+"},
+    {"attribute_values": ["1", "2"], "distance": [1000, 1000], "feature_anchor": ["start", "center", "end"], "filter_attribute": "level", "name": "query_level", "relative_location": ["PeakInsideFeature", "FeatureInsidePeak", "Upstream", "Downstream", "OverlapStart", "OverlapEnd"], "strand": "ignore"}
+          ],
+"show_attributes": ["all"],
+"priority": "False",
+"gtf": "test_data/gencode.v29.annotation.chr19.gtf",
+"bed": "test_data/genomic_regions.bed",
+"prefix": "genomic_regions",
+"outdir": "uropa_test_run",
+"threads": "1",
+"output_by_query": "False"
+}

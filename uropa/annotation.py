@@ -39,7 +39,7 @@ def create_anno_dict(peak, hit):
 	#Parse info from gtf string
 	try:
 		att = hit.attributes.strip("; ")	#remove trailing ;
-		pairs = re.split(";\s*", att) 		#regex split on ;(space)
+		pairs = re.split(r";\s*", att) 		#regex split on ;(space)
 
 		pairs = [pair.split() for pair in pairs]
 		attribute_tags = [pair[0] for pair in pairs]
