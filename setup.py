@@ -43,7 +43,10 @@ setup(name='uropa',
       install_requires=[
         'pysam',
         'psutil',
-        'numpy'
+        'numpy',
+        'pandas',
+        'matplotlib',
+        'seaborn'
       ],
       classifiers = [
         'License :: OSI Approved :: MIT License',

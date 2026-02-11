@@ -574,20 +574,28 @@ def main():
 	##### Visual summary #####
 	if args.summary:
 		logger.info("Creating the Summary graphs of the results...")
-		summary_script = "uropa_summary.R"
-		summary_output = output_prefix + "_summary.pdf"
 
-		#cmd is the command-line call str
-		call = [summary_script, "-f", os.path.join(output_prefix + "_finalhits.txt"), "-c", output_prefix + ".json", "-o", summary_output, "-b", os.path.join(output_prefix + "_allhits.txt"), "-a \'", cmd, "\'"]
-		call_str = ' '.join(call)
-		
+		# R-based summary (commented out, kept for reference)
+		# summary_script = "uropa_summary.R"
+		# summary_output = output_prefix + "_summary.pdf"
+		# #cmd is the command-line call str
+		# call = [summary_script, "-f", os.path.join(output_prefix + "_finalhits.txt"), "-c", output_prefix + ".json", "-o", summary_output, "-b", os.path.join(output_prefix + "_allhits.txt"), "-a \'", cmd, "\'"]
+		# call_str = ' '.join(call)
+		# try:
+		# 	logger.debug('Summary output call is {}'.format(call_str))
+		# 	sum_pr = subprocess.check_output(call_str, shell=True)
+		# except subprocess.CalledProcessError:
+		# 	logger.warning("Visualized summary output could not be created from: %s", call_str)
+		# except OSError:
+		# 	logger.warning("Rscript command not available for summary output.")
+
+		# Python distance distribution plot
 		try:
-			logger.debug('Summary output call is {}'.format(call_str))
-			sum_pr = subprocess.check_output(call_str, shell=True)
-		except subprocess.CalledProcessError:
-			logger.warning("Visualized summary output could not be created from: %s", call_str)
-		except OSError:
-			logger.warning("Rscript command not available for summary output.")
+			from uropa.visualization import plot_distance_distribution
+			plot_distance_distribution(output_prefix)
+			logger.info("Distance distribution plot created.")
+		except Exception as e:
+			logger.warning("Could not create distance distribution plot: %s", str(e))
 
 	##### Cleanup #####
 	if args.debug == False:
