@@ -43,7 +43,6 @@ uropa --bed test_data/genomic_regions.bed --gtf test_data/gencode.v29.annotation
 
 ### Key Conventions
 
-- **Distance model**: `raw_distance` = peak_center - anchor_pos (signed, genomic). `distance` = abs(raw_distance). Only absolute distance is written to output files; signed distance is reconstructed in `visualization.py` for stranded plots.
 - **Strand-aware anchors**: For minus-strand features, "start" anchor maps to `feat_end` and "end" anchor maps to `feat_start` (see `annotation.py:67-69`).
 - **Config format**: JSON with `queries` array, each query has keys like `feature`, `feature_anchor`, `distance` (array of [upstream, downstream]), `strand`, `relative_location`, `internals`, `filter_attribute`/`attribute_values`, `name`.
 - **Output columns**: `peak_chr, peak_start, peak_end, peak_id, peak_score, peak_strand, feature, feat_start, feat_end, feat_strand, feat_anchor, distance, relative_location, feat_ovl_peak, peak_ovl_feat` + show_attributes + query name.
