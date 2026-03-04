@@ -104,6 +104,16 @@ def main():
 	#additional.add_argument("-r","--reformat", help="create an additional compact and line-reduced table as result file", action="store_true")
 	additional.add_argument("--output-by-query", help="Additionally create output files for each named query seperately", action="store_true")
 	additional.add_argument("-s","--summary", help="Create additional visualisation of results in graphical format", action="store_true")
+	additional.add_argument("--plot-type", metavar="", help="Distance plot type (default: kde)",
+						choices=["kde", "hist"], default="kde")
+	additional.add_argument("--facet-by", metavar="", help="Group distances by column (default: feature)",
+						choices=["feature", "anchor", "query"], default="feature")
+	additional.add_argument("--distance-mode", metavar="", help="Distance mode (default: directional)",
+						choices=["directional", "absolute"], default="directional")
+	additional.add_argument("--summary-input", metavar="", help="Which output to visualize (default: finalhits)",
+						choices=["finalhits", "allhits"], default="finalhits")
+	additional.add_argument("--log-scale", help="Log-scale the y-axis of the summary plot",
+						action="store_true")
 	additional.add_argument("-t","--threads", help="Multiprocessed run: n = number of threads to run annotation process", type=int, action="store", metavar="n", default=1)
 	additional.add_argument("-l","--log", help="Log file name for messages and warnings (default: log is written to stdout)", action="store", metavar="uropa.log")
 	additional.add_argument("-d","--debug",help="Print verbose messages (for debugging)", action="count", default=0)
@@ -573,21 +583,17 @@ def main():
 
 	##### Visual summary #####
 	if args.summary:
-		logger.info("Creating the Summary graphs of the results...")
-		summary_script = "uropa_summary.R"
-		summary_output = output_prefix + "_summary.pdf"
-
-		#cmd is the command-line call str
-		call = [summary_script, "-f", os.path.join(output_prefix + "_finalhits.txt"), "-c", output_prefix + ".json", "-o", summary_output, "-b", os.path.join(output_prefix + "_allhits.txt"), "-a \'", cmd, "\'"]
-		call_str = ' '.join(call)
-		
-		try:
-			logger.debug('Summary output call is {}'.format(call_str))
-			sum_pr = subprocess.check_output(call_str, shell=True)
-		except subprocess.CalledProcessError:
-			logger.warning("Visualized summary output could not be created from: %s", call_str)
-		except OSError:
-			logger.warning("Rscript command not available for summary output.")
+		logger.info("Creating summary visualization...")
+		from .visualization import generate_summary
+		generate_summary(
+			output_prefix=output_prefix,
+			summary_input=args.summary_input,
+			plot_type=args.plot_type,
+			facet_by=args.facet_by,
+			distance_mode=args.distance_mode,
+			log_scale=args.log_scale,
+			logger=logger
+		)
 
 	##### Cleanup #####
 	if args.debug == False:
