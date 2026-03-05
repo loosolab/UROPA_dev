@@ -106,6 +106,8 @@ def main():
 	additional.add_argument("-s","--summary", help="Create additional visualisation of results in graphical format", action="store_true")
 	additional.add_argument("-t","--threads", help="Multiprocessed run: n = number of threads to run annotation process", type=int, action="store", metavar="n", default=1)
 	additional.add_argument("-l","--log", help="Log file name for messages and warnings (default: log is written to stdout)", action="store", metavar="uropa.log")
+	additional.add_argument("--genome-size", metavar="", help="Total genome size in Mb for enrichment analysis (default: inferred from GTF)", type=float, default=None)
+	additional.add_argument("--min-background", metavar="", help="Minimum background proportion (%%) to show a feature in enrichment plots (default: 0, no filtering)", type=float, default=0.0)
 	additional.add_argument("-d","--debug",help="Print verbose messages (for debugging)", action="count", default=0)
 	additional.add_argument("-v","--version", help="Prints the version and exits", action="version", version="%(prog)s " + VERSION)
 	additional.add_argument("-c", "--chunk", metavar="", help="Number of lines per chunk for multiprocessing (default: 1000)", type=int, default=1000) 
@@ -574,13 +576,29 @@ def main():
 	##### Visual summary #####
 	if args.summary:
 		logger.info("Creating the Summary graphs of the results...")
+
+		# Enrichment/depletion analysis (Python)
+		try:
+			from .visualization import run_enrichment_analysis
+			run_enrichment_analysis(
+				gtf_path=cfg_dict["gtf"],
+				finalhits_path=output_prefix + "_finalhits.txt",
+				output_prefix=output_prefix,
+				genome_size_mb=args.genome_size,
+				min_background_pct=args.min_background,
+			)
+		except Exception as e:
+			logger.warning("Enrichment analysis could not be completed: %s", e)
+			logger.debug("Full traceback:\n%s", traceback.format_exc())
+
+		# R-based summary (legacy)
 		summary_script = "uropa_summary.R"
 		summary_output = output_prefix + "_summary.pdf"
 
 		#cmd is the command-line call str
 		call = [summary_script, "-f", os.path.join(output_prefix + "_finalhits.txt"), "-c", output_prefix + ".json", "-o", summary_output, "-b", os.path.join(output_prefix + "_allhits.txt"), "-a \'", cmd, "\'"]
 		call_str = ' '.join(call)
-		
+
 		try:
 			logger.debug('Summary output call is {}'.format(call_str))
 			sum_pr = subprocess.check_output(call_str, shell=True)
