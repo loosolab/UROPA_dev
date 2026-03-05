@@ -18,7 +18,28 @@ COLORS = plt.cm.tab10.colors
 
 
 def load_uropa_output(filepath):
-    """Read UROPA TSV output, drop rows where distance is NA."""
+    """Read UROPA TSV output and drop rows where distance is NA.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to a UROPA output TSV file (e.g. ``*_allhits.txt`` or
+        ``*_finalhits.txt``).
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with columns ``distance``, ``peak_start``, ``peak_end``,
+        ``feat_start``, and ``feat_end`` cast to float. Rows with missing
+        or ``'NA'`` distance values are removed.
+
+    Raises
+    ------
+    FileNotFoundError
+        If *filepath* does not exist (raised by ``pd.read_csv``).
+    KeyError
+        If the required column ``distance`` is missing from the file.
+    """
     df = pd.read_csv(filepath, sep='\t')
     df = df[df['distance'].notna() & (df['distance'] != 'NA')]
     df['distance'] = df['distance'].astype(float)
@@ -30,10 +51,29 @@ def load_uropa_output(filepath):
 
 
 def reconstruct_signed_distance(df):
-    """Add 'signed_distance' column: negative = upstream (5'), positive = downstream (3').
+    """Add a ``signed_distance`` column to the DataFrame.
 
-    Reconstructs strand-relative signed distance from output columns.
-    Matches anchor resolution logic in annotation.py:67-69.
+    Negative values indicate upstream (5') and positive values indicate
+    downstream (3') relative to the feature strand. The anchor position is
+    resolved using the same strand-aware logic as ``annotation.py:67-69``.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        UROPA output DataFrame. Must contain the columns ``peak_start``,
+        ``peak_end``, ``feat_start``, ``feat_end``, ``feat_strand``, and
+        ``feat_anchor``.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The input DataFrame with an added ``signed_distance`` column (float).
+
+    Notes
+    -----
+    For minus-strand features the ``start`` anchor maps to ``feat_end`` and
+    the ``end`` anchor maps to ``feat_start``, matching the convention in
+    ``annotation.py``.
     """
     peak_center = (df['peak_start'] + df['peak_end']) / 2.0
     is_minus = df['feat_strand'] == '-'
@@ -54,7 +94,37 @@ def reconstruct_signed_distance(df):
 
 
 def plot_distance_kde(df, facet_col, distance_col, log_scale, ax, xlim=None):
-    """KDE density plot with colored overlays per facet group."""
+    """Plot a KDE density curve with colored overlays per facet group.
+
+    Each unique value in *facet_col* is drawn as a separate filled KDE curve.
+    Groups with fewer than 2 data points or singular covariance matrices are
+    silently skipped.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        UROPA output DataFrame containing at least *facet_col* and
+        *distance_col*.
+    facet_col : str
+        Column name used to split the data into groups (e.g. ``'feature'``,
+        ``'feat_anchor'``, or ``'name'``).
+    distance_col : str
+        Column name containing the distance values to plot. Typically
+        ``'distance'`` (absolute) or ``'signed_distance'`` (directional).
+    log_scale : bool
+        If ``True``, apply symmetric-log scale (``symlog``) to the y-axis
+        with ``linthresh=1e-6``.
+    ax : matplotlib.axes.Axes
+        Axes object to draw on.
+    xlim : tuple of (float, float) or None, optional
+        If provided, the KDE is evaluated over this ``(x_min, x_max)``
+        range instead of the data range. Default is ``None``.
+
+    Returns
+    -------
+    None
+        Draws directly on the provided *ax*.
+    """
     # Use xlim for KDE evaluation range if provided, otherwise use full data range
     all_data = df[distance_col].dropna().values
     if xlim is not None:
@@ -82,7 +152,36 @@ def plot_distance_kde(df, facet_col, distance_col, log_scale, ax, xlim=None):
 
 
 def plot_distance_hist(df, facet_col, distance_col, log_scale, ax, xlim=None):
-    """Histogram with colored overlays per facet group."""
+    """Plot a histogram with colored overlays per facet group.
+
+    Each unique value in *facet_col* is drawn as a separate step-filled
+    histogram layer.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        UROPA output DataFrame containing at least *facet_col* and
+        *distance_col*.
+    facet_col : str
+        Column name used to split the data into groups (e.g. ``'feature'``,
+        ``'feat_anchor'``, or ``'name'``).
+    distance_col : str
+        Column name containing the distance values to plot. Typically
+        ``'distance'`` (absolute) or ``'signed_distance'`` (directional).
+    log_scale : bool
+        If ``True``, apply symmetric-log scale (``symlog``) to the y-axis
+        with ``linthresh=1``.
+    ax : matplotlib.axes.Axes
+        Axes object to draw on.
+    xlim : tuple of (float, float) or None, optional
+        If provided, used as the ``range`` parameter for the histogram
+        binning. Default is ``None``.
+
+    Returns
+    -------
+    None
+        Draws directly on the provided *ax*.
+    """
     groups = sorted(df[facet_col].unique())
     data_list = [df.loc[df[facet_col] == g, distance_col].dropna().values for g in groups]
     colors = [COLORS[i % len(COLORS)] for i in range(len(groups))]
@@ -97,10 +196,50 @@ def plot_distance_hist(df, facet_col, distance_col, log_scale, ax, xlim=None):
 
 def generate_summary(output_prefix, summary_input, plot_type, facet_by,
                      distance_mode, log_scale, logger):
-    """Entry point called from uropa.py. Generates summary PDF.
+    """Generate a summary PDF with distance distribution plots.
 
-    Wraps all logic in try/except so visualization failures never crash the
-    UROPA pipeline. Errors are logged with context for debugging.
+    This is the main entry point called from ``uropa.py`` when ``--summary``
+    is set. All logic is wrapped in a try/except so that visualization
+    failures are logged but never crash the UROPA pipeline.
+
+    Parameters
+    ----------
+    output_prefix : str
+        Path prefix for UROPA output files (e.g. ``'results/my_run'``).
+        The input file is derived as ``output_prefix + '_finalhits.txt'`` or
+        ``output_prefix + '_allhits.txt'``, and the PDF is saved as
+        ``output_prefix + '_summary.pdf'``.
+    summary_input : {'finalhits', 'allhits'}
+        Which UROPA output to visualize. ``'finalhits'`` produces a single
+        plot; ``'allhits'`` produces one subplot per query.
+    plot_type : {'kde', 'hist'}
+        Visualization type. ``'kde'`` draws kernel density estimates,
+        ``'hist'`` draws histograms.
+    facet_by : {'feature', 'anchor', 'query'}
+        How to group (color) data within each plot. Mapped internally to
+        DataFrame columns: ``'feature'`` -> ``'feature'``,
+        ``'anchor'`` -> ``'feat_anchor'``, ``'query'`` -> ``'name'``.
+    distance_mode : {'absolute', 'directional'}
+        ``'absolute'`` plots unsigned distances. ``'directional'`` reconstructs
+        strand-relative signed distances (negative = upstream / 5',
+        positive = downstream / 3') and centers the x-axis symmetrically
+        around zero.
+    log_scale : bool
+        If ``True``, apply symmetric-log scale to the y-axis.
+    logger : logging.Logger
+        Logger instance for info/warning/error messages.
+
+    Returns
+    -------
+    None
+        Saves a PDF to ``output_prefix + '_summary.pdf'``. Returns
+        ``None`` in all cases, including on error.
+
+    Notes
+    -----
+    The function returns early (with a warning) if the input file is missing
+    or contains no annotated peaks. Any unexpected exception is caught,
+    logged at ERROR level, and a full traceback is logged at DEBUG level.
     """
     suffix = '_finalhits.txt' if summary_input == 'finalhits' else '_allhits.txt'
     filepath = output_prefix + suffix
